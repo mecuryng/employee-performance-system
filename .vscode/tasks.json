@@ -1,0 +1,18 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Employee Performance frontend",
+			"type": "shell",
+			"command": "C:/Users/Admin/Dev Apps/employee-performance-system/.venv/Scripts/python.exe",
+			"args": [
+				"-m",
+				"streamlit",
+				"run",
+				"frontend/app.py"
+			],
+			"isBackground": true,
+			"problemMatcher": []
+		}
+	]
+}

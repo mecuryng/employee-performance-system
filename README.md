@@ -19,13 +19,13 @@ Progressive employee performance evaluation with an explainable, rule-based HR r
 
 ## Run the backend
 
-From `backend/` after installing the requirements and configuring `DATABASE_URL` and `JWT_SECRET` in the project `.env` file:
+From `backend/` after installing the requirements. Local development defaults to a SQLite database at `employee_performance.db` in the project root, so a separate database server is not required. To use PostgreSQL, set `DATABASE_URL` in the project `.env` file to a SQLAlchemy PostgreSQL URL such as `postgresql+psycopg://user:password@host:5432/employee_performance`. Set a long, random `JWT_SECRET` before running outside local development.
 
 ```powershell
 uvicorn app.main:app --reload
 ```
 
-Set a long, random `JWT_SECRET` before running outside local development. The API is available at `http://127.0.0.1:8000` and its documentation at `/docs`.
+The API is available at `http://127.0.0.1:8000` and its documentation at `/docs`.
 
 Create the first administrator from `backend/`:
 

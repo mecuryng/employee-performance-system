@@ -15,9 +15,10 @@ app = FastAPI(
 @app.on_event("startup")
 def create_database_tables() -> None:
     Base.metadata.create_all(bind=engine)
-    with engine.begin() as connection:
-        connection.execute(text("ALTER TABLE kpis ADD COLUMN IF NOT EXISTS default_weight NUMERIC(5, 2) NOT NULL DEFAULT 0"))
-        connection.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS employee_id UUID UNIQUE REFERENCES employees(id)"))
+    if engine.dialect.name == "postgresql":
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE kpis ADD COLUMN IF NOT EXISTS default_weight NUMERIC(5, 2) NOT NULL DEFAULT 0"))
+            connection.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS employee_id UUID UNIQUE REFERENCES employees(id)"))
 
 
 app.include_router(health.router, prefix="/api/v1")

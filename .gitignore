@@ -1,5 +1,14 @@
 .env
 __pycache__/
+backend/server.log
+backend/server-error.log
+frontend/streamlit.log
+frontend/streamlit-error.log
 *.py[cod]
 .venv/
 venv/
+.venv/
+employee_performance.db
+employee_performance.db-shm
+employee_performance.db-wal
+__pycache__/

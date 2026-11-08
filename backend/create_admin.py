@@ -4,6 +4,9 @@ from sqlalchemy import select
 
 from app.database import Base, SessionLocal, engine
 from app.routers.auth import User, _password_hash
+# Import the organization models so employees (the target of User.employee_id)
+# and departments are registered in Base.metadata before create_all().
+from app.routers.organization import Employee  # noqa: F401
 
 
 def main() -> None:

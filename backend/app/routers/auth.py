@@ -125,6 +125,11 @@ def read_me(user: User = Depends(get_current_user)) -> User:
     return user
 
 
+@router.get("/users", response_model=list[UserView])
+def list_users(db: Session = Depends(get_db), _actor: User = Depends(require_roles("admin"))) -> list[User]:
+    return list(db.scalars(select(User).order_by(User.full_name, User.email)))
+
+
 @router.post("/users", response_model=UserView, status_code=201)
 def create_user(request: UserCreate, db: Session = Depends(require_roles("admin"))) -> User:
     if request.role not in ROLES:

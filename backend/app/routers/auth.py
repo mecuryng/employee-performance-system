@@ -1,4 +1,4 @@
-﻿from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 import base64
 import hashlib
 import hmac
@@ -131,7 +131,7 @@ def list_users(db: Session = Depends(get_db), _actor: User = Depends(require_rol
 
 
 @router.post("/users", response_model=UserView, status_code=201)
-def create_user(request: UserCreate, db: Session = Depends(require_roles("admin"))) -> User:
+def create_user(request: UserCreate, db: Session = Depends(get_db), _actor: User = Depends(require_roles("admin"))) -> User:
     if request.role not in ROLES:
         raise HTTPException(status_code=422, detail=f"role must be one of: {', '.join(sorted(ROLES))}")
     email = str(request.email).lower()

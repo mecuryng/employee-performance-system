@@ -51,6 +51,13 @@ def call(method: str, path: str, *, params: dict | None = None, body: dict | Non
         return None
 
 
+def call_and_rerun(method: str, path: str, *, params: dict | None = None, body: dict | None = None, success: str = "Saved.") -> Any:
+    result = call(method, path, params=params, body=body, success=success)
+    if result is not None:
+        st.session_state["flash_success"] = success
+        st.rerun()
+    return result
+
 def load(path: str, *, params: dict | None = None) -> list | dict | None:
     try:
         return api("GET", path, params=params)
@@ -106,9 +113,7 @@ def assessment_form(kind: str, employee_id: str | None = None) -> None:
         submitted = st.form_submit_button("Submit assessment", type="primary")
     if submitted:
         path = "/assessments/self" if kind == "self" else f"/assessments/supervisor/{employee_id}"
-        result = call("POST", path, body={"period_id": period_map[period_label]["id"], "comments": comments, "scores": scores}, success="Assessment submitted.")
-        if result:
-            st.rerun()
+        call_and_rerun("POST", path, body={"period_id": period_map[period_label]["id"], "comments": comments, "scores": scores}, success="Assessment submitted.")
 
 
 def assessment_table(items: list[dict], allow_evidence: bool = True) -> None:
@@ -136,8 +141,7 @@ def assessment_table(items: list[dict], allow_evidence: bool = True) -> None:
             summary = st.text_area("Evidence summary")
             url = st.text_input("Source URL (optional)")
             if st.form_submit_button("Add evidence"):
-                call("POST", f"/assessments/{assessment['id']}/evidence", body={"title": title, "summary": summary, "source_url": url or None}, success="Evidence added.")
-                st.rerun()
+                call_and_rerun("POST", f"/assessments/{assessment['id']}/evidence", body={"title": title, "summary": summary, "source_url": url or None}, success="Evidence added.")
 
 
 def employee_pages(user: dict) -> None:
@@ -193,8 +197,7 @@ def organization_admin() -> None:
     with st.form("department-create"):
         name = st.text_input("Department name")
         if st.form_submit_button("Add department"):
-            call("POST", "/departments", body={"name": name}, success="Department created.")
-            st.rerun()
+            call_and_rerun("POST", "/departments", body={"name": name}, success="Department created.")
     depts = load("/departments") or []
     st.dataframe(depts, use_container_width=True, hide_index=True)
     st.subheader("Employee directory")
@@ -209,8 +212,7 @@ def organization_admin() -> None:
         supervisor = st.selectbox("Supervisor (optional)", ["None", *sup_labels])
         if st.form_submit_button("Add employee", disabled=not dept_labels):
             body = {"employee_number": number, "full_name": full_name, "designation": designation, "department_id": dept_map[department]["id"], "supervisor_id": sup_map[supervisor]["id"] if supervisor != "None" else None}
-            call("POST", "/employees", body=body, success="Employee created.")
-            st.rerun()
+            call_and_rerun("POST", "/employees", body=body, success="Employee created.")
     st.dataframe([{"Name": e["full_name"], "Number": e["employee_number"], "Title": e["designation"], "Department": e["department_id"], "Supervisor": e["supervisor_id"], "Active": e["is_active"]} for e in (load("/employees") or [])], use_container_width=True, hide_index=True)
 
 
@@ -224,8 +226,7 @@ def configuration_admin() -> None:
             description = st.text_area("Description")
             weight = st.number_input("Default weight (%)", min_value=0.0, max_value=100.0, step=1.0)
             if st.form_submit_button("Add KPI"):
-                call("POST", "/kpis", body={"code": code, "name": name, "description": description, "default_weight": weight}, success="KPI created.")
-                st.rerun()
+                call_and_rerun("POST", "/kpis", body={"code": code, "name": name, "description": description, "default_weight": weight}, success="KPI created.")
         st.dataframe([{"Code": k["code"], "Name": k["name"], "Weight": k["default_weight"], "Active": k["is_active"]} for k in (load("/kpis", params={"include_inactive": True}) or [])], use_container_width=True, hide_index=True)
     with right:
         st.subheader("Evaluation periods")
@@ -234,8 +235,7 @@ def configuration_admin() -> None:
             start = st.date_input("Start date", value=date.today())
             end = st.date_input("End date", value=date.today())
             if st.form_submit_button("Add period"):
-                call("POST", "/evaluation-periods", body={"name": name, "start_date": start.isoformat(), "end_date": end.isoformat()}, success="Evaluation period created.")
-                st.rerun()
+                call_and_rerun("POST", "/evaluation-periods", body={"name": name, "start_date": start.isoformat(), "end_date": end.isoformat()}, success="Evaluation period created.")
         st.dataframe([{"Name": p["name"], "Start": p["start_date"], "End": p["end_date"], "Active": p["is_active"]} for p in (load("/evaluation-periods", params={"include_inactive": True}) or [])], use_container_width=True, hide_index=True)
 
 
@@ -298,8 +298,7 @@ def rules_page() -> None:
                 if score_at_least > 0: conditions["overall_score_at_least"] = score_at_least
                 if disagreement > 0: conditions["disagreement_at_least"] = disagreement
                 if gap_codes: conditions["gap_kpi_codes"] = gap_codes
-                call("POST", "/recommendation-rules", body={"name": name, "category": category, "priority": priority, "conditions": conditions, "action": action, "explanation_template": explanation}, success="Rule created.")
-                st.rerun()
+                call_and_rerun("POST", "/recommendation-rules", body={"name": name, "category": category, "priority": priority, "conditions": conditions, "action": action, "explanation_template": explanation}, success="Rule created.")
     rules = load("/recommendation-rules", params={"include_inactive": True}) or []
     if rules:
         st.dataframe([{"Name": r["name"], "Category": r["category"], "Priority": r["priority"], "Conditions": json.dumps(r["conditions"]), "Action": r["action"], "Active": r["is_active"]} for r in rules], use_container_width=True, hide_index=True)
@@ -308,8 +307,7 @@ def rules_page() -> None:
             labels, mapping = options(active, lambda r: r["name"])
             selected = st.selectbox("Deactivate rule", labels)
             if st.button("Deactivate selected rule"):
-                call("PATCH", f"/recommendation-rules/{mapping[selected]['id']}/deactivate", success="Rule deactivated.")
-                st.rerun()
+                call_and_rerun("PATCH", f"/recommendation-rules/{mapping[selected]['id']}/deactivate", success="Rule deactivated.")
     else:
         st.info("No recommendation rules configured.")
 
@@ -325,8 +323,22 @@ def reviews_page() -> None:
             employee = st.selectbox("Employee", e_labels)
             period = st.selectbox("Evaluation period", p_labels)
             if st.form_submit_button("Generate recommendations", type="primary"):
-                call("POST", f"/employees/{e_map[employee]['id']}/periods/{p_map[period]['id']}/recommendations", success="Recommendations generated.")
-                st.rerun()
+                call_and_rerun("POST", f"/employees/{e_map[employee]['id']}/periods/{p_map[period]['id']}/recommendations", success="Recommendations generated.")
+
+    items = load("/recommendations") or []
+    if not items:
+        st.info("No recommendations yet. Generate them after a supervisor assessment has been submitted.")
+        return
+    st.dataframe([{"Category": x["category"], "Priority": x["priority"], "Action": x["action"], "Explanation": x["explanation"], "Status": x["review_status"], "Employee": x["employee_id"], "Period": x["period_id"]} for x in items], use_container_width=True, hide_index=True)
+    pending = [x for x in items if x["review_status"] == "pending"]
+    if pending:
+        labels, mapping = options(pending, lambda x: f"{x['category']} · {x['priority']} · {x['id'][:8]}")
+        selected = st.selectbox("Review recommendation", labels)
+        note = st.text_area("Review note")
+        yes, no = st.columns(2)
+        for col, status in ((yes, "approved"), (no, "rejected")):
+            if col.button(status.title(), use_container_width=True):
+                call_and_rerun("PATCH", f"/recommendations/{mapping[selected]['id']}/review", body={"status": status, "note": note}, success=f"Recommendation {status}.")
 
 
 def score_calculator() -> None:
@@ -355,21 +367,6 @@ def score_calculator() -> None:
                 st.metric("Overall score", result["overall_score"])
                 st.write(f"Classification: **{result['classification'].replace('_', ' ').title()}**")
                 st.write("KPI gaps: " + (", ".join(result["gaps"]) if result["gaps"] else "None"))
-    items = load("/recommendations") or []
-    if not items:
-        st.info("No recommendations yet. Generate them after a supervisor assessment has been submitted.")
-        return
-    st.dataframe([{"Category": x["category"], "Priority": x["priority"], "Action": x["action"], "Explanation": x["explanation"], "Status": x["review_status"], "Employee": x["employee_id"], "Period": x["period_id"]} for x in items], use_container_width=True, hide_index=True)
-    pending = [x for x in items if x["review_status"] == "pending"]
-    if pending:
-        labels, mapping = options(pending, lambda x: f"{x['category']} · {x['priority']} · {x['id'][:8]}")
-        selected = st.selectbox("Review recommendation", labels)
-        note = st.text_area("Review note")
-        yes, no = st.columns(2)
-        for col, status in ((yes, "approved"), (no, "rejected")):
-            if col.button(status.title(), use_container_width=True):
-                call("PATCH", f"/recommendations/{mapping[selected]['id']}/review", body={"status": status, "note": note}, success=f"Recommendation {status}.")
-                st.rerun()
 
 
 def reporting_page() -> None:
@@ -445,6 +442,9 @@ def main() -> None:
     if not user:
         login_screen()
         return
+    success_message = st.session_state.pop("flash_success", None)
+    if success_message:
+        st.success(success_message)
     with st.sidebar:
         st.title("📊 Performance")
         st.caption(f"{user['full_name']} · {ROLE_LABELS.get(user['role'], user['role'])}")
